@@ -36,10 +36,6 @@ namespace SEModAPIExtensions.API
 {
     class Permission
     {
-
-
-        
-
         #region "Attributes"
 
         private int m_permRank;
@@ -66,6 +62,11 @@ namespace SEModAPIExtensions.API
             get
             {
                 return m_permRank;
+            }
+
+            set
+            {
+                m_permRank = value;
             }
         }
 
@@ -190,7 +191,7 @@ namespace SEModAPIExtensions.API
         private static PermissionManager m_instance;
 
         private List<Permission> m_permList;
-        private int m_adminRank;
+        private Permission m_adminPerm;
 
         #endregion
 
@@ -228,11 +229,11 @@ namespace SEModAPIExtensions.API
             }
         }
 
-        public int AdminRank
+        public Permission AdminPermission
         {
             get
             {
-                return m_adminRank;
+                return m_adminPerm;
             }
         }
 
@@ -242,7 +243,99 @@ namespace SEModAPIExtensions.API
 
         public List<ulong> GetAdmins()
         {
-            return new List<ulong>();
+            List<ulong> admins = new List<ulong>();
+
+            foreach (Permission perm in m_permList)
+            {
+                if (perm.RankInteger < m_adminPerm.RankInteger) continue;
+                foreach(ulong sid in perm.PlayerSIDList)
+                {
+                    admins.Add(sid);
+                }
+            }
+
+            return admins;
+        }
+
+        public List<ulong> GetSuperAdmins()
+        {
+            List<ulong> superAdmins = new List<ulong>();
+
+            foreach (Permission perm in m_permList)
+            {
+                if (perm.RankInteger <= m_adminPerm.RankInteger) continue;
+                foreach (ulong sid in perm.PlayerSIDList)
+                {
+                    superAdmins.Add(sid);
+                }
+            }
+
+            return superAdmins;
+        }
+
+        public short ChangeAdmin(Permission perm, bool useRelativism = true, List<Permission> oldAdminPerm = null)
+        {
+            if (perm == m_adminPerm) return 2;
+
+            if (useRelativism)
+            {
+                foreach (ulong sid in m_adminPerm.PlayerSIDList)
+                {
+                    perm.AddPlayer(sid);
+                }
+
+                foreach (Permission perms in m_permList)
+                {
+                    perms.RankInteger *= (m_adminPerm.RankInteger / perm.RankInteger);
+                }
+            }
+
+            oldAdminPerm.Add(m_adminPerm);
+            m_adminPerm = perm;
+
+            return 1;
+        }
+
+        public bool IsAdmin(object ply)
+        {
+            ulong plySid;
+            if (ply is long)
+            {
+                plySid = PlayerMap.Instance.GetPlayerItemFromPlayerId((long)ply).SteamId;
+            }
+            if (ply is ulong)
+            {
+                plySid = (ulong)ply;
+            }
+            else
+            {
+                PlayerMap.InternalPlayerItem plyObj = new PlayerMap.InternalPlayerItem(ply);
+                plySid = plyObj.steamId;
+            }
+
+            if (plySid == null) return false;
+            return this.GetAdmins().Contains(plySid);
+        }
+
+        public bool IsSuperAdmin(object ply)
+        {
+            ulong plySid;
+            if (ply is long)
+            {
+                plySid = PlayerMap.Instance.GetPlayerItemFromPlayerId((long)ply).SteamId;
+            }
+            if (ply is ulong)
+            {
+                plySid = (ulong)ply;
+            }
+            else
+            {
+                PlayerMap.InternalPlayerItem plyObj = new PlayerMap.InternalPlayerItem(ply);
+                plySid = plyObj.steamId;
+            }
+
+            if (plySid == null) return false;
+            return this.GetSuperAdmins().Contains(plySid);
         }
 
         #endregion
