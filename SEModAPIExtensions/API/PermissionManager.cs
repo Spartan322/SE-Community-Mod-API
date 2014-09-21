@@ -317,7 +317,7 @@ namespace SEModAPIExtensions.API
             return this.GetAdmins().Contains(plySid);
         }
 
-        public bool IsSuperAdmin(object ply)
+        public bool IsSuperAdmin(Object ply)
         {
             ulong plySid;
             if (ply is long)
